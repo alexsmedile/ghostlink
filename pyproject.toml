@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "symlink-cli"
+version = "1.0.0"
+description = "Create macOS symbolic links interactively or in bulk"
+requires-python = ">=3.9"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.scripts]
+symlink-cli = "symlink_cli.core:main"
+slink = "symlink_cli.core:main"
+# other alias candidates (uncomment to activate):
+# linkmate = "symlink_cli.core:main"
+# ghostlink = "symlink_cli.core:main"
+# mirrorlink = "symlink_cli.core:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
