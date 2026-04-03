@@ -1,4 +1,4 @@
-# ghostlink
+# 👻 ghostlink
 
 **invisible links between your files**
 
@@ -7,6 +7,14 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 `ghostlink` is a guided macOS CLI for working with symbolic links — create, inspect, repair, sync, and schedule them without the raw `ln -s` guesswork.
+
+Symlinks are powerful, but easy to get wrong. `ghostlink` adds structure: guided prompts, dry-run previews, saved records, and repair flows — so you always know what's linked, where, and whether it's still intact.
+
+Good for:
+- keeping project folders reachable from multiple places without copying files
+- tracking important links and checking them later
+- rebuilding the same link setup on a new machine
+- automating sync jobs with visible status and heartbeat metadata
 
 ## Install
 
