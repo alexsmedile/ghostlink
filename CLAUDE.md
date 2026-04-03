@@ -1,75 +1,63 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file gives Claude Code a concise map of the active `ghostlink` codebase.
 
 ## Overview
 
-Python CLI tool for creating symbolic links on macOS. No dependencies beyond the standard library. Installable via `pipx` — exposes two commands: `symlink-cli` (descriptive) and `slink` (short alias), both pointing to the same entrypoint.
+`ghostlink` is a standard-library Python CLI for guided symlink management on macOS. The product name is `ghostlink`. Compatibility commands remain available:
+- `ghostlink`
+- `symlink-cli`
+- `slink`
 
-## Installation
+The real package now lives in `src/ghostlink/`. A small compatibility shim remains in `src/symlink_cli/` for legacy Python import paths.
+
+## Install And Run
 
 ```bash
 pipx install .
-# or for development (editable)
 pipx install -e .
+python -m ghostlink.core --help
+python -m symlink_cli.core --help
 ```
 
-## Running the tool
+## Package Structure
 
-```bash
-# Interactive mode (default)
-slink
-symlink-cli
-
-# Bulk mode from a mapping file
-slink --bulk links.txt
-symlink-cli --bulk links.txt
-
-# Dry run (safe preview, no changes)
-slink --bulk links.txt --dry-run
-
-# Auto-confirm, overwrite conflicts
-slink --bulk links.txt -y --conflict overwrite
+```text
+src/ghostlink/
+  cli/
+  compat/
+  domain/
+  integrations/
+  output/
+  services/
+  storage/
+  core.py
 ```
 
-## Bulk file format
+Key entry points:
+- `src/ghostlink/cli/main.py`: command dispatch
+- `src/ghostlink/cli/parser.py`: argparse structure
+- `src/ghostlink/services/`: operational logic
+- `src/ghostlink/storage/`: registry and run-log persistence
 
-```
-# comment
-~/source/path -> ~/destination/path
-"/path with spaces/file" -> "~/Desktop/link"
-```
+## Current Scope
 
-Default separator is `->`, configurable with `--separator`.
+Implemented:
+- guided mode
+- fast-path create
+- bulk create
+- find, check, repair
+- saved link and sync records
+- sync diff/run/save
+- schedule add/list/show/run/remove
+- relation-set export/apply/import
+- relative-link mode
+- `--json` output for machine-readable flows
 
-## Project structure
+## Active Docs
 
-```
-src/symlink_cli/
-  __init__.py
-  core.py          # all logic
-pyproject.toml     # package definition + entry points
-_archived/
-  symlink_helper.py  # original standalone script, superseded by src/
-```
-
-## Architecture
-
-Everything lives in `src/symlink_cli/core.py`, organized in clear sections:
-
-- **Data models** — `LinkSpec` (source+destination pair) and `OperationResult` (status + message after an operation)
-- **Path utilities** — `expand_path` (resolves `~`, env vars, relative paths), `normalize_destination` (handles "drop into folder" vs "exact path" semantics)
-- **Validation** — `validate_spec` checks source existence, same-path identity, and destination parent
-- **Create logic** — `create_symlink` orchestrates conflict handling (ask/skip/overwrite/backup) then calls `os.symlink`
-- **Interactive mode** — `interactive_collect` prompts for source/destination; two sub-modes: pick folder + name, or full path
-- **Bulk parsing** — `load_bulk_specs` + `parse_bulk_line`; tries separator split, then CSV, then `shlex` fallback
-- **Reporting** — `print_result` / `print_summary` format output with `[OK]` / `[ERR]` / `[SKIP]` / `[DRY]` prefixes
-- **Find logic** — `walk_symlinks(root, max_depth, skip_prefixes)`: stack-based DFS using `os.scandir()`; yields `FindResult`; skips `MACOS_SKIP_PREFIXES` and permission-denied dirs silently
-- **CLI** — `build_parser` + `run_interactive` / `run_bulk` / `run_find` + `main`
-
-## Planned features (FEATURES.md)
-
-- Search all symlinks in system or a folder
-- Bulk-sync workflows (e.g. syncing AI skills/agents folders)
-- Search all symlinks in system or a folder
-- Bulk-sync workflows (e.g. syncing AI skills/agents folders)
+- `README.md`: user-facing docs
+- `AGENTS.md`: contributor guide
+- `ROADMAP.md`: future work
+- `CHANGELOG.md`: release/build summary
+- `_archive/`: completed planning docs

@@ -3,20 +3,24 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "symlink-cli"
+name = "ghostlink"
 version = "1.0.0"
-description = "Create macOS symbolic links interactively or in bulk"
+description = "Guided macOS CLI for symlink workflows, checks, sync, and scheduling"
 requires-python = ">=3.9"
 readme = "README.md"
 license = { text = "MIT" }
 
 [project.scripts]
-symlink-cli = "symlink_cli.core:main"
-slink = "symlink_cli.core:main"
+ghostlink = "ghostlink.core:main"
+symlink-cli = "ghostlink.core:main"
+slink = "ghostlink.core:main"
 # other alias candidates (uncomment to activate):
-# linkmate = "symlink_cli.core:main"
-# ghostlink = "symlink_cli.core:main"
-# mirrorlink = "symlink_cli.core:main"
+# linkmate = "ghostlink.core:main"
+# ghostlink = "ghostlink.core:main"
+# mirrorlink = "ghostlink.core:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
