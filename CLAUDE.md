@@ -56,7 +56,13 @@ Implemented:
 
 ## Active Docs
 
-- `README.md`: user-facing docs
+- `README.md`: overview and quick start
+- `docs/commands.md`: create, find, check, repair, save/manage reference
+- `docs/sync-and-schedules.md`: sync and schedule commands
+- `docs/relation-sets.md`: export/apply/import + JSON schema
+- `docs/bulk-format.md`: bulk file syntax
+- `docs/json-and-exit-codes.md`: `--json` usage and exit code table
+- `docs/safety-and-compatibility.md`: safety flags and legacy aliases
 - `AGENTS.md`: contributor guide
 - `ROADMAP.md`: future work
 - `CHANGELOG.md`: release/build summary

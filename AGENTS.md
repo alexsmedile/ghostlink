@@ -11,7 +11,7 @@
 - `output/`: human-readable renderers and prompts
 - `integrations/`: macOS-specific adapters such as `launchd`
 
-Legacy Python import compatibility is preserved through `src/symlink_cli/`. Tests live in `tests/`. User-facing docs are in `README.md`; archived planning material is under `_archive/`.
+Legacy Python import compatibility is preserved through `src/symlink_cli/`. Tests live in `tests/`. User-facing docs are in `README.md` (overview) and `docs/` (reference); archived planning material is under `_archive/`.
 
 ## Build, Test, and Development Commands
 
@@ -51,7 +51,7 @@ The project uses `pytest`. Add focused tests in files named `test_<feature>.py`.
 
 ## Commit & Pull Request Guidelines
 
-Follow Conventional Commit style, for example `feat: add schedule heartbeat metadata` or `docs: refresh publish-ready readme`. Pull requests should explain user-visible behavior changes, compatibility impact, and any storage-format implications. If a change affects CLI output or docs, update `README.md` in the same PR.
+Follow Conventional Commit style, for example `feat: add schedule heartbeat metadata` or `docs: refresh publish-ready readme`. Pull requests should explain user-visible behavior changes, compatibility impact, and any storage-format implications. If a change affects CLI output or docs, update the relevant file in `docs/` (and `README.md` if the overview changes) in the same PR.
 
 ## Security & Configuration Tips
 
