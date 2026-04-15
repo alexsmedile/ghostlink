@@ -19,7 +19,12 @@ Good for:
 ## Install
 
 ```bash
-pipx install ghostlink
+# from GitHub (recommended)
+pipx install git+https://github.com/alexsmedile/ghostlink
+
+# or clone and install locally
+git clone https://github.com/alexsmedile/ghostlink
+pipx install ./ghostlink
 ```
 
 ## Quick Start
