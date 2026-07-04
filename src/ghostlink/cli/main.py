@@ -296,7 +296,10 @@ def run_check(args, registry: RegistryService) -> int:
     if getattr(args, "saved", False):
         records = [item for item in registry.list_records("links") if item.get("type") == "link"]
         if not records:
-            print("No saved links.")
+            if getattr(args, "json", False):
+                emit_json({"scope": "saved", "results": [], "summary": summarize_check_results([])})
+            else:
+                print("No saved links.")
             return 0
         results = []
         for record in records:
@@ -629,7 +632,10 @@ def run_remove(args, registry: RegistryService) -> int:
     if not registry.remove(args.name):
         print(f"Not found: {args.name}")
         return 1
-    print(f"Removed: {args.name}")
+    if getattr(args, "json", False):
+        emit_json({"removed": {"name": args.name}})
+    else:
+        print(f"Removed: {args.name}")
     return 0
 
 
@@ -642,7 +648,10 @@ def run_rename(args, registry: RegistryService) -> int:
     if not ok:
         print(f"Not found: {args.old_name}")
         return 1
-    print(f"Renamed: {args.old_name} -> {args.new_name}")
+    if getattr(args, "json", False):
+        emit_json({"renamed": {"old_name": args.old_name, "new_name": args.new_name}})
+    else:
+        print(f"Renamed: {args.old_name} -> {args.new_name}")
     return 0
 
 
@@ -769,12 +778,15 @@ def run_schedule(args, registry: RegistryService) -> int:
             print(render_saved_record(schedules[0]))
         return 0
     if args.schedule_command == "run":
-        return run_scheduled_job(args.name, registry)
+        return run_scheduled_job(args.name, registry, json_output=getattr(args, "json", False))
     if args.schedule_command == "remove":
         if not registry.remove_from_group(args.name, "schedules"):
             print(f"Not found: {args.name}")
             return 1
-        print(f"Removed schedule: {args.name}")
+        if getattr(args, "json", False):
+            emit_json({"removed_schedule": {"name": args.name}})
+        else:
+            print(f"Removed schedule: {args.name}")
         return 0
     record = registry.get_record(args.name)
     if not record:
@@ -806,7 +818,7 @@ def run_schedule(args, registry: RegistryService) -> int:
     return 0
 
 
-def run_scheduled_job(name: str, registry: RegistryService) -> int:
+def run_scheduled_job(name: str, registry: RegistryService, json_output: bool = False) -> int:
     target = registry.get_record(name)
     if not target:
         print(f"Saved job not found: {name}")
@@ -819,13 +831,21 @@ def run_scheduled_job(name: str, registry: RegistryService) -> int:
             type(
                 "Args",
                 (),
-                {"sync_command": "run", "name": name, "source": None, "dest": None, "dry_run": False, "yes": True},
+                {
+                    "sync_command": "run",
+                    "name": name,
+                    "source": None,
+                    "dest": None,
+                    "dry_run": False,
+                    "yes": True,
+                    "json": json_output,
+                },
             )(),
             registry,
         )
         message = "sync run completed" if result_code == 0 else "sync run failed"
     elif target.get("type") == "link":
-        result_code, message = run_scheduled_link_check(name, registry)
+        result_code, message = run_scheduled_link_check(name, registry, json_output=json_output)
     else:
         print("Scheduling is only supported for saved link and sync jobs.")
         registry.update_schedule_status(name, "error", exit_code=1, message=message, mark_ran=True)
@@ -840,7 +860,7 @@ def run_scheduled_job(name: str, registry: RegistryService) -> int:
     return result_code
 
 
-def run_scheduled_link_check(name: str, registry: RegistryService) -> tuple[int, str]:
+def run_scheduled_link_check(name: str, registry: RegistryService, json_output: bool = False) -> tuple[int, str]:
     record = registry.get_record(name)
     if not record or record.get("type") != "link":
         print(f"Saved link not found: {name}")
@@ -864,9 +884,12 @@ def run_scheduled_link_check(name: str, registry: RegistryService) -> tuple[int,
             },
         }
     )
-    print(render_check_result(result))
-    print()
-    print(render_check_summary([result]))
+    if json_output:
+        emit_json({"scope": "scheduled", "name": name, "result": result, "summary": summarize_check_results([result])})
+    else:
+        print(render_check_result(result))
+        print()
+        print(render_check_summary([result]))
     if result.status == "ok":
         return 0, result.message
     return 1, result.message

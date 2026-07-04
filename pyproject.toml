@@ -10,6 +10,11 @@ requires-python = ">=3.9"
 readme = "README.md"
 license = { text = "MIT" }
 
+[project.urls]
+Homepage = "https://github.com/alexsmedile/ghostlink"
+Repository = "https://github.com/alexsmedile/ghostlink"
+Issues = "https://github.com/alexsmedile/ghostlink/issues"
+
 [project.scripts]
 ghostlink = "ghostlink.core:main"
 symlink-cli = "ghostlink.core:main"

@@ -204,6 +204,74 @@ def test_sync_record_round_trip_and_rename(tmp_path: Path, capsys) -> None:
     assert "Removed: skills-sync-v2" in removed
 
 
+def test_management_mutations_emit_json(tmp_path: Path, capsys) -> None:
+    registry = tmp_path / "registry.json"
+    assert main(
+        [
+            "save",
+            "--name",
+            "docs-link",
+            "--source",
+            str(tmp_path / "source"),
+            "--dest",
+            str(tmp_path / "docs-link"),
+            "--registry-path",
+            str(registry),
+            "--json",
+        ]
+    ) == 0
+    json.loads(capsys.readouterr().out)
+
+    assert main(["rename", "docs-link", "docs-link-v2", "--registry-path", str(registry), "--json"]) == 0
+    renamed = json.loads(capsys.readouterr().out)
+    assert renamed["renamed"] == {"old_name": "docs-link", "new_name": "docs-link-v2"}
+
+    assert main(["remove", "docs-link-v2", "--registry-path", str(registry), "--json"]) == 0
+    removed = json.loads(capsys.readouterr().out)
+    assert removed["removed"]["name"] == "docs-link-v2"
+
+
+def test_empty_saved_check_emits_json(tmp_path: Path, capsys) -> None:
+    registry = tmp_path / "registry.json"
+
+    assert main(["check", "--saved", "--registry-path", str(registry), "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["scope"] == "saved"
+    assert payload["results"] == []
+    assert payload["summary"]["ok"] == 0
+
+
+def test_scheduled_link_check_emits_json(tmp_path: Path, capsys) -> None:
+    registry = tmp_path / "registry.json"
+    source = tmp_path / "source"
+    destination = tmp_path / "docs-link"
+    source.mkdir()
+    destination.symlink_to(source)
+
+    assert main(
+        [
+            "save",
+            "--name",
+            "docs-link",
+            "--source",
+            str(source),
+            "--dest",
+            str(destination),
+            "--registry-path",
+            str(registry),
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    assert main(["schedule", "run", "docs-link", "--registry-path", str(registry), "--json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["scope"] == "scheduled"
+    assert payload["name"] == "docs-link"
+    assert payload["result"]["status"] == "ok"
+
+
 def test_save_rejects_duplicate_name_across_record_types(tmp_path: Path, capsys) -> None:
     registry = tmp_path / "registry.json"
     source = tmp_path / "source"
@@ -385,9 +453,9 @@ def test_schedule_write_list_and_remove_round_trip(tmp_path: Path, capsys, monke
     listed = capsys.readouterr().out
     assert "skills-sync" in listed
 
-    assert main(["schedule", "remove", "skills-sync", "--registry-path", str(registry)]) == 0
-    removed = capsys.readouterr().out
-    assert "Removed schedule: skills-sync" in removed
+    assert main(["schedule", "remove", "skills-sync", "--registry-path", str(registry), "--json"]) == 0
+    removed = json.loads(capsys.readouterr().out)
+    assert removed["removed_schedule"]["name"] == "skills-sync"
 
     assert main(["show", "skills-sync", "--registry-path", str(registry)]) == 0
     shown = capsys.readouterr().out

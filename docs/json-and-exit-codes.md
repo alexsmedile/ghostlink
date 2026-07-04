@@ -2,7 +2,7 @@
 
 ## JSON Output
 
-Pass `--json` to any command for machine-readable output:
+Pass `--json` to non-interactive commands for machine-readable output. It can appear before or after the command name:
 
 ```bash
 ghostlink find ~/Desktop --json
@@ -10,6 +10,8 @@ ghostlink check --saved --json
 ghostlink status --json
 ghostlink sync diff docs-sync --config links.json --profile dev --json
 ```
+
+Successful command paths and empty-result checks emit JSON. Some validation errors and interactive cancellation paths still use human-readable output; fully structured error coverage remains planned.
 
 ## Exit Codes
 

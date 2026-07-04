@@ -158,7 +158,8 @@ That is what powers commands like `ghostlink list`, `ghostlink show`, `ghostlink
 - [Skill installation](docs/skill-installation.md)
 - [Changelog](CHANGELOG.md)
 - [Roadmap](ROADMAP.md)
+- [Ideas](IDEAS.md)
 
 ## License
 
-MIT
+[MIT](LICENSE)
