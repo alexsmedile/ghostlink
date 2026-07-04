@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 
+from ghostlink import __version__
 from ghostlink.domain.models import ConflictPolicy
 
 
@@ -22,6 +23,11 @@ def build_parser() -> argparse.ArgumentParser:
             "  ghostlink export links.json --profile dev"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
         "--registry-path",
