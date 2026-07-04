@@ -1,5 +1,6 @@
 ---
 name: ghostlink
+version: 1.0.0
 description: >
   Use this skill when the user wants to create, inspect, repair, save, export,
   import, sync, or schedule symbolic link workflows on macOS with the

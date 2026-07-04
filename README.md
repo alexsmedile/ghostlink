@@ -3,6 +3,7 @@
 **Create invisible links between your files**
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -58,6 +59,7 @@ Compatibility commands remain available after install:
 
 ```bash
 ghostlink --help
+ghostlink --version
 symlink-cli --help
 slink --help
 ```
