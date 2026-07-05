@@ -4,8 +4,22 @@ from pathlib import Path
 
 from ghostlink.domain.models import LinkSpec, SyncSpec
 from ghostlink.services.config_service import export_relation_set, load_profile_specs, load_profile_syncs
+from ghostlink.services.check_service import inspect_link
 from ghostlink.services.link_service import load_bulk_specs
 from ghostlink.services.sync_service import build_sync_plan
+
+
+def test_inspect_link_normalizes_absolute_target_aliases(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    destination = tmp_path / "link"
+    source.mkdir()
+    (tmp_path / "other").mkdir()
+    alias_source = tmp_path / "other" / ".." / "source"
+    destination.symlink_to(alias_source)
+
+    result = inspect_link(destination, expected_target=source)
+
+    assert result.status == "ok"
 
 
 def test_bulk_specs_are_relative_to_bulk_file(tmp_path: Path) -> None:

@@ -12,7 +12,7 @@ Map the request into:
 For “link the Spectacular project in my home directory,” use:
 
 ```text
-source      = /Users/alex/vault/data/skills_db/spectacular
+source      = /Users/you/path/to/spectacular
 destination = ~/spectacular
 ```
 

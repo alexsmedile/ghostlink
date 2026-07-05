@@ -389,13 +389,13 @@ def test_sync_run_updates_saved_status_and_writes_log(tmp_path: Path, capsys, mo
             "sync",
             "run",
             "skills-sync",
-            "--dry-run",
+            "-y",
             "--registry-path",
             str(registry),
         ]
     ) == 0
     output = capsys.readouterr().out
-    assert "Applied: 0" in output
+    assert "Applied: 1" in output
 
     assert main(["show", "skills-sync", "--registry-path", str(registry)]) == 0
     shown = capsys.readouterr().out
@@ -403,8 +403,9 @@ def test_sync_run_updates_saved_status_and_writes_log(tmp_path: Path, capsys, mo
     assert "last_run_at:" in shown
 
     payload = json.loads(run_log.read_text(encoding="utf-8").splitlines()[-1])
-    assert payload["job_type"] == "sync"
-    assert payload["dry_run"] is True
+    assert payload["action"] == "sync-run"
+    assert payload["record_type"] == "sync"
+    assert payload["details"]["applied"] == 1
 
 
 def test_schedule_write_list_and_remove_round_trip(tmp_path: Path, capsys, monkeypatch) -> None:
