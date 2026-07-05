@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+from ghostlink import __version__
 from ghostlink import core
+from ghostlink.cli.parser import build_parser
 from symlink_cli import core as compat_core
 
 
@@ -50,3 +54,11 @@ def test_prompt_non_empty_keeps_asking_until_input_is_present(monkeypatch):
 
 def test_symlink_cli_compat_module_still_resolves():
     assert compat_core.main is core.main
+
+
+def test_cli_version_matches_package_version(capsys):
+    with pytest.raises(SystemExit) as error:
+        build_parser().parse_args(["--version"])
+
+    assert error.value.code == 0
+    assert capsys.readouterr().out.strip() == f"ghostlink {__version__}"

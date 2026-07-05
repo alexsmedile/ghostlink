@@ -9,3 +9,5 @@ build/
 .DS_Store
 .claude/
 _archive/
+_backups/
+.spectacular.local/

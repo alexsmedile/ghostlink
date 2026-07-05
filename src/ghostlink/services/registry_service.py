@@ -101,6 +101,19 @@ class RegistryService:
         existing["updated_at"] = utc_now()
         save_registry(self.registry_path, data)
 
+    def adopt_link_source(self, name: str, source: Path, status: str) -> dict[str, Any]:
+        data = self._load()
+        if name not in data["links"]:
+            raise ValueError(f"saved link not found: {name}")
+        existing = data["links"][name]
+        now = utc_now()
+        existing["source"] = str(source)
+        existing["last_checked_at"] = now
+        existing["last_status"] = status
+        existing["updated_at"] = now
+        save_registry(self.registry_path, data)
+        return {"name": name, **existing}
+
     def update_sync_status(self, name: str, status: str, mark_ran: bool = False) -> None:
         data = self._load()
         if name not in data["syncs"]:
