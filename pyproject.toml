@@ -8,7 +8,7 @@ version = "1.1.0"
 description = "Guided macOS CLI for symlink workflows, checks, sync, and scheduling"
 requires-python = ">=3.9"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
 
 [project.urls]
 Homepage = "https://github.com/alexsmedile/ghostlink"
