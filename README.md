@@ -55,6 +55,21 @@ git clone https://github.com/alexsmedile/ghostlink
 pipx install ./ghostlink
 ```
 
+`pipx` installs Ghostlink into an isolated environment and exposes `ghostlink`,
+`symlink-cli`, and `slink` as command symlinks under `~/.local/bin/`. A normal
+local install is a snapshot: source edits are not reflected automatically.
+
+```bash
+# refresh a normal local install after pulling or editing source
+pipx install --force ./ghostlink
+
+# development alternative: keep the environment linked to the checkout
+pipx install --force --editable ./ghostlink
+```
+
+Use the editable form while developing. Use the normal form when validating
+what users receive from a built package.
+
 Compatibility commands remain available after install:
 
 ```bash
