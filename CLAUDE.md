@@ -14,11 +14,19 @@ The real package now lives in `src/ghostlink/`. A small compatibility shim remai
 ## Install And Run
 
 ```bash
+# isolated snapshot; rerun with --force after source changes
 pipx install .
-pipx install -e .
+
+# editable development install linked to this checkout
+pipx install --force --editable .
+
+ghostlink --version
 python -m ghostlink.core --help
 python -m symlink_cli.core --help
 ```
+
+`pipx` exposes the three command aliases as symlinks under `~/.local/bin/`.
+Use `pipx install --force .` to refresh a non-editable local installation.
 
 ## Package Structure
 
@@ -53,11 +61,15 @@ Implemented:
 - relation-set export/apply/import
 - relative-link mode
 - `--json` output for machine-readable flows
+- live saved-link comparison in `list`
+- default saved-link checks plus `--issues`, `--broken`, and `--depth`
+- existing-link indexing with explicit `keep` or `adopt` conflict behavior
+- lifecycle history and conservative registry/history cleanup
 
 ## Active Docs
 
 - `README.md`: overview and quick start
-- `docs/commands.md`: create, find, check, repair, save/manage reference
+- `docs/commands.md`: complete command reference, including lifecycle management
 - `docs/sync-and-schedules.md`: sync and schedule commands
 - `docs/relation-sets.md`: export/apply/import + JSON schema
 - `docs/bulk-format.md`: bulk file syntax
