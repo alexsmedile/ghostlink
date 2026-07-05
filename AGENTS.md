@@ -24,6 +24,9 @@ Use Python 3.9+.
 - `pytest -q`: run the full test suite
 - `python -m compileall src`: quick syntax check
 
+The test suite also verifies that package, CLI, README, changelog, and active
+skill versions do not drift before a release.
+
 For safe manual checks, prefer dry-run commands such as:
 
 ```bash
