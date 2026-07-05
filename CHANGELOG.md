@@ -2,6 +2,18 @@
 
 All notable changes to `ghostlink` are documented here.
 
+## 1.1.0
+
+### Managed Link Lifecycle
+
+- Added live filesystem health and observed targets to `list`
+- Added lifecycle `history` with filters and legacy run-log compatibility
+- Added idempotent `index` for optionally saving discovered filesystem links
+- Added explicit filesystem adoption for registry discrepancies
+- Made bare `check` inspect saved links and added issue/depth filters
+- Added conservative registry cleanup and threshold-required history pruning
+- Normalized lifecycle logging while keeping registry schema version 1
+
 ## 1.0.0
 
 Initial public `ghostlink` release.

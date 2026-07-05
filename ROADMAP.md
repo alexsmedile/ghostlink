@@ -2,10 +2,11 @@
 
 ## Near Term
 
-- Expand `--json` coverage to every command and keep the schema stable enough for scripting.
-- Add richer filtering for `find`, `check`, `list`, and `status`.
+- Finish structured JSON error coverage and stabilize schemas for scripting.
+- Add richer filtering for `list` and `status` after observing the 1.1 lifecycle workflows.
 - Improve import/export validation with clearer errors for malformed relation-set files.
 - Add packaged release workflows and publish/update guidance for `ghostlink`.
+- Evaluate persisted index roots only if repeated explicit `index PATH` scans prove cumbersome.
 
 ## Dashboard Idea
 

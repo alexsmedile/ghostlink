@@ -3,7 +3,7 @@
 **Create invisible links between your files**
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.0-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS-lightgrey)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -107,6 +107,29 @@ ghostlink repair --saved -y
 ghostlink status
 ```
 
+Discover existing filesystem links and optionally manage them:
+
+```bash
+ghostlink find ~ --depth 2
+ghostlink index ~ --depth 2 --dry-run -y
+ghostlink index ~ --depth 2 --on-conflict keep -y
+```
+
+Inspect current managed state and lifecycle history:
+
+```bash
+ghostlink list
+ghostlink check
+ghostlink history --type link --limit 20
+```
+
+Preview explicit cleanup:
+
+```bash
+ghostlink cleanup registry --dry-run
+ghostlink cleanup history --older-than 90d --dry-run
+```
+
 Export a setup and rebuild it elsewhere:
 
 ```bash
@@ -146,6 +169,8 @@ The registry tracks saved links, saved sync jobs, schedules, and status fields s
 - `last_message`
 
 That is what powers commands like `ghostlink list`, `ghostlink show`, `ghostlink check --saved`, and `ghostlink status`.
+
+The filesystem remains the source of truth for what currently exists. `ghostlink list` compares it with saved intent on every run, while `ghostlink check` also refreshes stored health metadata. The run log records committed lifecycle events for `ghostlink history`; dry runs are not recorded.
 
 ## Docs
 

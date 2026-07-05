@@ -17,9 +17,10 @@ Check one path or all saved links:
 ```bash
 ghostlink check ~/spectacular
 ghostlink check --saved
+ghostlink check --issues
 ```
 
-Use `--json` when a script will consume the successful result.
+Bare `ghostlink check` is equivalent to `check --saved`. Use `--issues` for every non-OK state, `--broken` for broken links only, and `--depth` for directory scans. Use `--json` when a script will consume the successful result.
 
 ## Save and inspect records
 
@@ -29,6 +30,8 @@ ghostlink list
 ghostlink show docs-link
 ghostlink status
 ```
+
+`list` reports the live observed target for saved links without updating saved health timestamps. Use `check` when registry health metadata should be refreshed.
 
 Manage record names without changing the underlying link:
 

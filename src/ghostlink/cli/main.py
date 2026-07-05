@@ -7,6 +7,7 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 
 from ghostlink.cli.parser import build_parser
+from ghostlink.cli.lifecycle_commands import run_cleanup, run_history, run_index
 from ghostlink.compat.legacy_flags import translate_legacy_args
 from ghostlink.domain.models import LinkOperationResult, SavedLinkRecord, SavedSyncRecord, ScheduleSpec, SyncSpec
 from ghostlink.domain.models import LinkSpec
@@ -34,11 +35,12 @@ from ghostlink.services.config_service import (
     saved_sync_record_to_export,
 )
 from ghostlink.services.find_service import walk_symlinks
+from ghostlink.services.lifecycle_service import observe_saved_link
 from ghostlink.services.link_service import create_symlink, load_bulk_specs
 from ghostlink.services.registry_service import RegistryService
 from ghostlink.services.schedule_service import ScheduleService
 from ghostlink.services.sync_service import build_sync_plan, run_sync_plan
-from ghostlink.storage.run_log import append_run_log, append_run_log_entry, default_run_log_path
+from ghostlink.storage.run_log import append_run_log_entry, default_run_log_path
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -69,6 +71,12 @@ def main(argv: list[str] | None = None) -> int:
         return run_save(args, registry)
     if args.command == "list":
         return run_list(registry, getattr(args, "json", False))
+    if args.command == "history":
+        return run_history(args, default_run_log_path())
+    if args.command == "index":
+        return run_index(args, registry, default_run_log_path())
+    if args.command == "cleanup":
+        return run_cleanup(args, registry, default_run_log_path())
     if args.command == "show":
         return run_show(args, registry)
     if args.command == "remove":
@@ -151,6 +159,17 @@ def run_create(args, registry: RegistryService) -> int:
     else:
         print(render_link_result(result))
     if result.status == "created":
+        append_audit_log(
+            {
+                "action": "create",
+                "status": "ok",
+                "record_type": "link",
+                "name": args.save_name,
+                "source": str(spec.source),
+                "destination": str(spec.destination),
+                "message": result.message,
+            }
+        )
         maybe_save_created_link(spec.source, spec.destination, args.conflict, args.save_name, registry, args.yes)
     return 1 if result.status == "error" else 0
 
@@ -203,6 +222,17 @@ def run_bulk_create(args, registry: RegistryService) -> int:
         print(render_operation_summary(results))
     for result in results:
         if result.status == "created":
+            append_audit_log(
+                {
+                    "action": "create",
+                    "status": "ok",
+                    "record_type": "link",
+                    "source": str(result.spec.source),
+                    "destination": str(result.spec.destination),
+                    "message": result.message,
+                    "details": {"bulk_file": str(file_path)},
+                }
+            )
             maybe_save_created_link(
                 result.spec.source,
                 result.spec.destination,
@@ -293,7 +323,13 @@ def run_find(args) -> int:
 
 
 def run_check(args, registry: RegistryService) -> int:
-    if getattr(args, "saved", False):
+    if getattr(args, "saved", False) and getattr(args, "path", None):
+        print("Provide a path or use --saved, not both.")
+        return 2
+    if getattr(args, "broken", False) and getattr(args, "issues", False):
+        print("Use either --broken or --issues, not both.")
+        return 2
+    if getattr(args, "saved", False) or not getattr(args, "path", None):
         records = [item for item in registry.list_records("links") if item.get("type") == "link"]
         if not records:
             if getattr(args, "json", False):
@@ -315,6 +351,9 @@ def run_check(args, registry: RegistryService) -> int:
                     "action": "check",
                     "status": result.status,
                     "name": str(record["name"]),
+                    "record_type": "link",
+                    "source": str(record["source"]),
+                    "destination": str(record["destination"]),
                     "message": result.message,
                     "details": {
                         "path": str(record["destination"]),
@@ -322,24 +361,21 @@ def run_check(args, registry: RegistryService) -> int:
                     },
                 },
             )
-            if not getattr(args, "json", False):
-                print(render_check_result(result))
+        selected = filter_check_results(results, args)
         if getattr(args, "json", False):
-            emit_json({"scope": "saved", "results": results, "summary": summarize_check_results(results)})
+            emit_json({"scope": "saved", "results": selected, "summary": summarize_check_results(selected)})
         else:
+            for result in selected:
+                print(render_check_result(result))
             print()
-            print(render_check_summary(results))
-        return 1 if any(result.status != "ok" for result in results) else 0
-    if not getattr(args, "path", None):
-        print("Provide a path or use --saved.")
-        return 1
+            print(render_check_summary(selected))
+        return 1 if any(result.status != "ok" for result in selected) else 0
     target = expand_path(args.path)
     if target.is_dir():
-        results = inspect_tree(target, broken_only=args.broken)
+        results = inspect_tree(target, max_depth=getattr(args, "depth", None))
     else:
         results = [inspect_link(target)]
-        if args.broken:
-            results = [item for item in results if item.status == "broken"]
+    results = filter_check_results(results, args)
     if getattr(args, "json", False):
         emit_json({"scope": str(target), "results": results, "summary": summarize_check_results(results)})
     else:
@@ -348,6 +384,14 @@ def run_check(args, registry: RegistryService) -> int:
         print()
         print(render_check_summary(results))
     return 1 if any(result.status in {"broken", "missing", "mismatch", "not-link"} for result in results) else 0
+
+
+def filter_check_results(results: list[object], args) -> list[object]:
+    if getattr(args, "broken", False):
+        return [item for item in results if getattr(item, "status", None) == "broken"]
+    if getattr(args, "issues", False):
+        return [item for item in results if getattr(item, "status", None) != "ok"]
+    return results
 
 
 def run_repair(args, registry: RegistryService) -> int:
@@ -369,19 +413,18 @@ def run_repair(args, registry: RegistryService) -> int:
         if name:
             if result.status in {"created", "skipped"}:
                 registry.update_link_status(name, "ok")
-            append_audit_log(
-                {
-                    "action": "repair",
-                    "status": result.status,
-                    "name": name,
-                    "message": result.message,
-                    "details": {
+            if not args.dry_run:
+                append_audit_log(
+                    {
+                        "action": "repair",
+                        "status": result.status,
+                        "name": name,
+                        "record_type": "link",
                         "source": str(spec.source),
                         "destination": str(spec.destination),
-                        "dry_run": args.dry_run,
+                        "message": result.message,
                     },
-                },
-            )
+                )
         if not getattr(args, "json", False):
             print(render_link_result(result))
     if getattr(args, "json", False):
@@ -476,6 +519,16 @@ def run_save(args, registry: RegistryService) -> int:
         emit_json({"saved": {"name": args.name, "type": args.type, "source": expand_path(args.source), "destination": expand_path(args.dest)}})
     else:
         print(f"Saved {args.type}: {args.name}")
+    append_audit_log(
+        {
+            "action": "save",
+            "status": "ok",
+            "name": args.name,
+            "record_type": args.type,
+            "source": str(expand_path(args.source)),
+            "destination": str(expand_path(args.dest)),
+        }
+    )
     return 0
 
 
@@ -547,6 +600,19 @@ def run_apply(args, registry: RegistryService) -> int:
             assume_yes=args.yes,
         )
         results.append(result)
+        if result.status == "created":
+            append_audit_log(
+                {
+                    "action": "create",
+                    "status": "ok",
+                    "name": str(name) if name else None,
+                    "record_type": "link",
+                    "source": str(spec.source),
+                    "destination": str(spec.destination),
+                    "message": result.message,
+                    "details": {"relation_set": str(file_path), "profile": args.profile},
+                }
+            )
         if not getattr(args, "json", False):
             print(render_link_result(result))
         if args.save and result.status == "created":
@@ -608,11 +674,21 @@ def run_list(registry: RegistryService, json_output: bool = False) -> int:
         else:
             emit_json({"items": []})
         return 0
+    observed = [observe_saved_link(record) if record.get("type") == "link" else record for record in records]
     if json_output:
-        emit_json({"items": records})
+        emit_json({"items": observed})
     else:
-        for record in records:
-            print(f"{record['name']}\t{record.get('type', 'unknown')}\t{record.get('source', '')}\t{record.get('destination', '')}")
+        for record in observed:
+            if record.get("type") != "link":
+                print(f"{record['name']}\t{record.get('type', 'unknown')}\t{record.get('source', '')}\t{record.get('destination', '')}")
+                continue
+            state = dict(record["observed"])
+            status = str(state["status"]).upper()
+            actual = state.get("actual_target") or "-"
+            line = f"[{status}] {record['name']}\t{record['destination']} -> {actual}"
+            if state["status"] == "mismatch":
+                line += f"  expected: {state['expected_target']}"
+            print(line)
     return 0
 
 
@@ -629,6 +705,7 @@ def run_show(args, registry: RegistryService) -> int:
 
 
 def run_remove(args, registry: RegistryService) -> int:
+    record = registry.get_record(args.name)
     if not registry.remove(args.name):
         print(f"Not found: {args.name}")
         return 1
@@ -636,10 +713,22 @@ def run_remove(args, registry: RegistryService) -> int:
         emit_json({"removed": {"name": args.name}})
     else:
         print(f"Removed: {args.name}")
+    if record:
+        append_audit_log(
+            {
+                "action": "remove",
+                "status": "ok",
+                "name": args.name,
+                "record_type": str(record.get("type", "unknown")),
+                "source": record.get("source"),
+                "destination": record.get("destination"),
+            }
+        )
     return 0
 
 
 def run_rename(args, registry: RegistryService) -> int:
+    record = registry.get_record(args.old_name)
     try:
         ok = registry.rename(args.old_name, args.new_name)
     except ValueError as error:
@@ -652,6 +741,18 @@ def run_rename(args, registry: RegistryService) -> int:
         emit_json({"renamed": {"old_name": args.old_name, "new_name": args.new_name}})
     else:
         print(f"Renamed: {args.old_name} -> {args.new_name}")
+    if record:
+        append_audit_log(
+            {
+                "action": "rename",
+                "status": "ok",
+                "name": args.new_name,
+                "record_type": str(record.get("type", "unknown")),
+                "source": record.get("source"),
+                "destination": record.get("destination"),
+                "details": {"old_name": args.old_name},
+            }
+        )
     return 0
 
 
@@ -699,6 +800,16 @@ def run_sync(args, registry: RegistryService) -> int:
             emit_json({"saved": {"name": args.name, "type": "sync", "source": expand_path(args.source), "destination": expand_path(args.dest)}})
         else:
             print(f"Saved sync: {args.name}")
+        append_audit_log(
+            {
+                "action": "sync-save",
+                "status": "ok",
+                "name": args.name,
+                "record_type": "sync",
+                "source": str(expand_path(args.source)),
+                "destination": str(expand_path(args.dest)),
+            }
+        )
         return 0
     try:
         spec = resolve_sync_spec(args, registry)
@@ -724,18 +835,22 @@ def run_sync(args, registry: RegistryService) -> int:
     result = run_sync_plan(plan, dry_run=dry_run)
     if getattr(args, "name", None) and not getattr(args, "source", None) and not getattr(args, "dest", None) and not getattr(args, "config", None):
         registry.update_sync_status(args.name, "ok" if not result.errors else "error", mark_ran=True)
-    append_audit_log(
-        {
-            "job_type": "sync",
-            "source": str(spec.source),
-            "destination": str(spec.destination),
-            "applied": result.applied,
-            "skipped": result.skipped,
-            "errors": result.errors,
-            "dry_run": dry_run,
-        },
-        structured=False,
-    )
+    if not dry_run:
+        append_audit_log(
+            {
+                "action": "sync-run",
+                "status": "error" if result.errors else "ok",
+                "record_type": "sync",
+                "name": getattr(args, "name", None),
+                "source": str(spec.source),
+                "destination": str(spec.destination),
+                "details": {
+                    "applied": result.applied,
+                    "skipped": result.skipped,
+                    "errors": result.errors,
+                },
+            },
+        )
     if getattr(args, "json", False):
         emit_json({"plan": plan, "result": result, "summary": summarize_sync_plan(plan)})
     else:
@@ -787,6 +902,7 @@ def run_schedule(args, registry: RegistryService) -> int:
             emit_json({"removed_schedule": {"name": args.name}})
         else:
             print(f"Removed schedule: {args.name}")
+        append_audit_log({"action": "schedule-remove", "status": "ok", "name": args.name, "record_type": "schedule"})
         return 0
     record = registry.get_record(args.name)
     if not record:
@@ -813,6 +929,16 @@ def run_schedule(args, registry: RegistryService) -> int:
         registry.save_schedule(spec, job_type=str(record.get("type", "schedule")))
         if not getattr(args, "json", False):
             print(f"Wrote schedule preview: {path}")
+        append_audit_log(
+            {
+                "action": "schedule-add",
+                "status": "ok",
+                "name": args.name,
+                "record_type": "schedule",
+                "destination": str(path),
+                "details": {"every": args.every},
+            }
+        )
     if getattr(args, "json", False):
         emit_json({"schedule_file": path, "plist": content, "written": bool(getattr(args, "write", False)), "name": args.name})
     return 0
@@ -856,6 +982,16 @@ def run_scheduled_job(name: str, registry: RegistryService, json_output: bool = 
         exit_code=result_code,
         message=message,
         mark_ran=True,
+    )
+    append_audit_log(
+        {
+            "action": "schedule-run",
+            "status": "ok" if result_code == 0 else "error",
+            "name": name,
+            "record_type": "schedule",
+            "message": message,
+            "details": {"exit_code": result_code},
+        }
     )
     return result_code
 
@@ -961,6 +1097,9 @@ def normalize_command_shape(argv: list[str]) -> list[str]:
         "import",
         "save",
         "list",
+        "history",
+        "index",
+        "cleanup",
         "show",
         "remove",
         "rename",
@@ -980,12 +1119,9 @@ def normalize_command_shape(argv: list[str]) -> list[str]:
     return argv
 
 
-def append_audit_log(payload: dict[str, object], structured: bool = True) -> None:
+def append_audit_log(payload: dict[str, object]) -> None:
     try:
-        if structured:
-            append_run_log_entry(payload, path=default_run_log_path())
-        else:
-            append_run_log(default_run_log_path(), payload)
+        append_run_log_entry(payload, path=default_run_log_path())
     except OSError:
         pass
 

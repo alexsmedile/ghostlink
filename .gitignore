@@ -10,3 +10,4 @@ build/
 .claude/
 _archive/
 _backups/
+.spectacular.local/
