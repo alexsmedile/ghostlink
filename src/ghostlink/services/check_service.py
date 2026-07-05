@@ -27,7 +27,7 @@ def inspect_link(path: Path, expected_target: Path | None = None, label: str | N
             message=f"path is not a symlink: {path}",
         )
     target = Path(os.readlink(path))
-    resolved_target = (path.parent / target).resolve() if not target.is_absolute() else target
+    resolved_target = (path.parent / target).resolve() if not target.is_absolute() else target.resolve(strict=False)
     if not resolved_target.exists():
         return CheckResult(
             label=label or path.name,

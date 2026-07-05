@@ -4,11 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ghostlink"
-version = "1.0.0"
+version = "1.1.0"
 description = "Guided macOS CLI for symlink workflows, checks, sync, and scheduling"
 requires-python = ">=3.9"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+
+[project.urls]
+Homepage = "https://github.com/alexsmedile/ghostlink"
+Repository = "https://github.com/alexsmedile/ghostlink"
+Issues = "https://github.com/alexsmedile/ghostlink/issues"
 
 [project.scripts]
 ghostlink = "ghostlink.core:main"

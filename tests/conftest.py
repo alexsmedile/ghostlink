@@ -4,6 +4,8 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
@@ -14,6 +16,11 @@ if str(SRC) not in sys.path:
 
 def pytest_sessionstart(session) -> None:
     os.environ.setdefault("PYTHONPATH", str(SRC))
+
+
+@pytest.fixture(autouse=True)
+def isolate_default_run_log(tmp_path, monkeypatch):
+    monkeypatch.setattr("ghostlink.cli.main.default_run_log_path", lambda: tmp_path / "runs.jsonl")
 
 
 def require_exports(module, names: tuple[str, ...]) -> None:

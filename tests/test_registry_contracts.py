@@ -61,7 +61,7 @@ def test_run_log_storage_contract():
             "read_run_log_entries",
         ),
     )
-    assert RUN_LOG_SCHEMA_VERSION == 1
+    assert RUN_LOG_SCHEMA_VERSION == 2
     assert default_run_log_path().name == "runs.jsonl"
 
 

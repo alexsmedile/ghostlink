@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 
+from ghostlink import __version__
 from ghostlink.domain.models import ConflictPolicy
 
 
@@ -22,6 +23,11 @@ def build_parser() -> argparse.ArgumentParser:
             "  ghostlink export links.json --profile dev"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
     parser.add_argument(
         "--registry-path",
@@ -56,6 +62,8 @@ def build_parser() -> argparse.ArgumentParser:
     check.add_argument("path", nargs="?")
     check.add_argument("--saved", action="store_true")
     check.add_argument("--broken", action="store_true")
+    check.add_argument("--issues", action="store_true", help="show only non-OK results")
+    check.add_argument("--depth", type=int, help="limit directory recursion depth")
 
     repair = subparsers.add_parser("repair", help="repair one saved link, all saved links, or a bulk file")
     repair.add_argument("name", nargs="?")
@@ -114,6 +122,33 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     subparsers.add_parser("list", help="list saved records")
+
+    history = subparsers.add_parser("history", help="show lifecycle event history")
+    history.add_argument("--limit", type=int, default=50)
+    history.add_argument("--action")
+    history.add_argument("--type", choices=["link", "sync", "schedule"], dest="record_type")
+    history.add_argument("--name")
+    history.add_argument("--since", help="include events from a duration such as 12h, 30d, or 4w")
+
+    index = subparsers.add_parser("index", help="discover filesystem links and optionally save them")
+    index.add_argument("path")
+    index.add_argument("--depth", type=int)
+    index.add_argument("--on-conflict", choices=["ask", "keep", "adopt"], default="ask")
+    index.add_argument("--dry-run", action="store_true")
+    index.add_argument("-y", "--yes", action="store_true")
+
+    cleanup = subparsers.add_parser("cleanup", help="clean registry records or lifecycle history")
+    cleanup_subparsers = cleanup.add_subparsers(dest="cleanup_command", required=True)
+    cleanup_registry = cleanup_subparsers.add_parser("registry", help="remove explicitly selected unhealthy link records")
+    cleanup_registry.add_argument("--name", action="append", dest="names")
+    cleanup_registry.add_argument("--dry-run", action="store_true")
+    cleanup_registry.add_argument("-y", "--yes", action="store_true")
+    cleanup_history = cleanup_subparsers.add_parser("history", help="remove lifecycle events older than a boundary")
+    boundary = cleanup_history.add_mutually_exclusive_group(required=True)
+    boundary.add_argument("--older-than")
+    boundary.add_argument("--before")
+    cleanup_history.add_argument("--dry-run", action="store_true")
+    cleanup_history.add_argument("-y", "--yes", action="store_true")
 
     show = subparsers.add_parser("show", help="show one saved record")
     show.add_argument("name")
