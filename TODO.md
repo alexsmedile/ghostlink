@@ -139,35 +139,29 @@ Format adheres to [make-a-change](https://github.com/alexsmedile/make-a-change).
 - [ ] [ui] Build a TUI for browsing saved links, health status and history —
       there is no interactive surface today <!-- ref: tui -->
 
-  **Constraint that drives the choice**: ghostlink currently has **zero runtime
-  dependencies** — every import is stdlib, and `output/renderers.py` returns plain
-  strings. A TUI is the first thing that would break that. Decide deliberately
-  whether the TUI ships as an **optional extra** (`pip install ghostlink[tui]`,
-  declared under `[project.optional-dependencies]`) so the core CLI stays
-  dependency-free. Recommended: yes, optional.
+  **Decided: Textual** (see [DECISIONS.md](DECISIONS.md) `adr-001`). Ships as an
+  optional extra — `pip install ghostlink[tui]` under
+  `[project.optional-dependencies]` — so the core CLI keeps its zero runtime
+  dependencies. Rich comes first inside `output/renderers.py`, since it is
+  Textual's own render layer and its renderables pass straight into Textual
+  widgets.
 
-  **Library options (Python):**
-
-  | Library | Model | Deps | Fit |
-  |---|---|---|---|
-  | **Textual** | async widget app, CSS-like styling | rich + typing-ext | Best fit — `DataTable` for the registry, `Tree` for link graphs, built-in filtering |
-  | **Rich** | render-only, no event loop | none beyond itself | Cheapest upgrade: colored tables and health badges without a full app |
-  | **prompt_toolkit** | full-screen + line editing | wcwidth | Good if the priority is interactive prompts, weaker for dashboards |
-  | **urwid** | classic widget toolkit | none | Mature but dated API, more boilerplate |
-  | **curses** (stdlib) | raw terminal control | none | Keeps zero-dep promise; everything hand-rolled, no mouse, poor Windows story |
-
-  **Recommendation**: `Rich` for the immediate win (colorize existing renderers,
-  no architectural change), then `Textual` for the actual TUI — same author and
-  ecosystem, so Rich renderables drop straight into Textual widgets. That makes
-  it one dependency direction, not two.
+  `services/lifecycle_service.py` already computes `observed` state and
+  `unhealthy_registry_candidates()`, so the TUI reads existing structured data
+  rather than issuing new queries. `SavedLinkRecord` supplies the columns:
+  `name`, `source`, `destination`, `conflict_policy`, `last_checked_at`,
+  `last_status`.
 
   - [ ] [ui] Adopt Rich in `output/renderers.py` behind a capability check —
         fall back to the current plain strings when Rich is absent or the output
         is not a TTY. Keeps `--json` and piped output byte-identical
-  - [ ] [ui] Design the screen layout before writing widgets: a links list
-        (source → destination, health badge, profile), a detail pane
-        (registry record + last check + run history), and a filter bar
-        (by status, by profile, broken-only)
+  - [ ] [ui] Pin a Textual floor version and add the `tui` extra to
+        `pyproject.toml` — the API has moved fast across releases
+  - [ ] [ui] Build the screen from Textual widgets: `DataTable` for the links
+        list (source → destination, health badge, profile), a detail pane bound
+        to row selection (registry record + last check + run history), and an
+        `Input` filter bar (by status, by profile, broken-only). Use `Tree` where
+        links chain through intermediate paths
   - [ ] [ui] Map read-only views first — `list`, `check`, `history`, `status`
         all already return structured data. Ship browsing before any mutation
   - [ ] [ui] Only then add actions — `repair`, `remove`, `rename` from the TUI.
