@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import sys
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
@@ -13,6 +14,7 @@ from ghostlink.domain.models import LinkOperationResult, SavedLinkRecord, SavedS
 from ghostlink.domain.models import LinkSpec
 from ghostlink.domain.paths import expand_path, normalize_destination
 from ghostlink.domain.validation import validate_output_path
+from ghostlink.integrations import automator
 from ghostlink.output.prompts import ask_conflict_choice, choose_action, interactive_collect
 from ghostlink.output.renderers import (
     render_check_result,
@@ -89,6 +91,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_schedule(args, registry)
     if args.command == "status":
         return run_status(registry, getattr(args, "json", False))
+    if args.command == "install":
+        return run_install(args)
     return 1
 
 
@@ -1046,6 +1050,34 @@ def run_status(registry: RegistryService, json_output: bool = False) -> int:
     return 0
 
 
+def run_install(args) -> int:
+    if args.install_command == "workflow":
+        return run_install_workflow(args)
+    return 1
+
+
+def run_install_workflow(args) -> int:
+    if not args.automator:
+        print("ghostlink install workflow requires --automator", file=sys.stderr)
+        return 2
+    destination = automator.workflow_install_path()
+    if args.uninstall:
+        removed = automator.uninstall_quick_link_workflow()
+        if removed:
+            automator.refresh_launch_services()
+            print(f"Removed {destination}")
+        else:
+            print(f"No workflow installed at {destination}")
+        return 0
+    ghostlink_bin = shutil.which("ghostlink") or str(Path.home() / ".local" / "bin" / "ghostlink")
+    installed_path = automator.install_quick_link_workflow(ghostlink_bin)
+    automator.refresh_launch_services()
+    print(f"Installed {automator.SERVICE_MENU_TITLE!r} to {installed_path}")
+    print("Right-click a folder in Finder → Quick Actions to use it.")
+    print("If it doesn't appear, enable it in System Settings → Keyboard → Keyboard Shortcuts → Services.")
+    return 0
+
+
 def relative_source_for_destination(source: Path, destination: Path) -> Path:
     return Path(os.path.relpath(source, start=destination.parent))
 
@@ -1106,6 +1138,7 @@ def normalize_command_shape(argv: list[str]) -> list[str]:
         "sync",
         "schedule",
         "status",
+        "install",
     }
     first = argv[0]
     if first == "bulk":

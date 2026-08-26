@@ -197,4 +197,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("status", help="show the latest saved status information")
 
+    install = subparsers.add_parser("install", help="install macOS integrations")
+    install_subparsers = install.add_subparsers(dest="install_command", required=True)
+    install_workflow = install_subparsers.add_parser(
+        "workflow", help="install a Finder Quick Action / Service workflow"
+    )
+    install_workflow.add_argument(
+        "--automator",
+        action="store_true",
+        required=True,
+        help="install the Automator-based 'Ghostlink: Create Symlink Here…' Finder Quick Action",
+    )
+    install_workflow.add_argument("--uninstall", action="store_true", help="remove the installed workflow instead")
+
     return parser

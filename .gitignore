@@ -11,3 +11,4 @@ build/
 _archive/
 _backups/
 .spectacular.local/
+.venv/
